@@ -183,8 +183,7 @@ function New-DiscordOrder {
           Set         = $OurStockRow.Set
           Condition   = $OurStockRow.Condition
           Quantity    = $OurStockRow.Qty
-          Price       = $OurStockRow.OurPrice
-          MarketValue = $OurStockRow.Market
+          Price       = '${0:N2}' -f ($OurStockRow.OurPrice -as [double])
           SetNumber   = $OurStockRow.Number
           Rarity      = $OurStockRow.Rarity
         }
