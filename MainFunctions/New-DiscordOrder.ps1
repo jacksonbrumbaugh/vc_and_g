@@ -1,5 +1,5 @@
 <# RULER ----15--------25-----------------------50----------------------------80                 100                 120
-Modified: 2024-03-03
+Modified: 2024-03-04
 By: Jackson B
 #>
 function New-DiscordOrder {
@@ -93,32 +93,51 @@ function New-DiscordOrder {
 
     for ( $n = 0; $n -lt 2; $n++ ) { Write-Host "" }
 
-    $WantCardNameArray = $WantListContent.foreach{ $_ -replace "\d{1,3} (.*)",'$1' }
+    $WantCardArray = foreach ( $ThisWantRow in $WantListContent ) {
+      $CardName, $SetNumber = if ( $ThisWantRow -match "\(" ) {
+        $Name = $ThisWantRow -replace "^\d{1,3} (.*) \(.*",'$1'
+        $SetNum = $ThisWantRow -replace ".*\) (.*)",'$1'
+
+        <#
+        Special printers (e.g. Foil, Extended Art)
+        are marked from Moxfield with *F*, *E* (possibly other codes)
+        #>
+        if ( $SetNum -match "\*" ) {
+          $SetNum, $AltPrintingCode = $SetNum -split " "
+          $Name += " " + $AltPrintingCode
+        }
+
+        $Name, $SetNum
+
+      } else {
+        ($ThisWantRow -replace "\d{1,3} (.*)",'$1'), $null
+      }
+
+      [PSCustomObject]@{
+        Name   = $CardName
+        Number = $SetNumber
+        Raw    = $ThisWantRow
+      }
+
+    } # End block:foreach This Want Row
 
     $WeHaveArray = @()
-    foreach ( $ThisWantCard in $WantCardNameArray ) {
-      if ( $ThisWantCard -notin $InventoryArray.Name ) {
-        continue
-      }
-
-      <#
-      Enhancement Idea
-
-      allow for "fuzzy match" of card names
-      #>
-      $OurStock = $InventoryArray.where{ $_.Name -eq $ThisWantCard }
-
-      if ( ($OurStock.Qty | Measure-Object -Maximum).Maximum -eq 0 ) {
-        continue
-      }
+    foreach ( $ThisWantCard in $WantCardArray ) {
+      $NameMatchArray = $InventoryArray.where{ $_.Name -match $ThisWantCard.Name }
+      $OurStock = $NameMatchArray.where{ $_.Number -eq $ThisWantCard.Number }
 
       foreach ( $OurStockRow in $OurStock ) {
         if ( $OurStockRow.Qty -eq 0 ) {
           continue
         }
 
+        Write-Verbose "Our condition: $($OurStockRow.Condition)"
+        if ( ($ThisWantCard.Raw -match "\*F\*") -and ($OurStockRow.Condition -notmatch "Foil") ) {
+          continue
+        }
+
         $WeHaveArray += [PSCustomObject]@{
-          Name        = $OurStockRow.Name
+          Name        = $ThisWantCard.Name
           Set         = $OurStockRow.Set
           Condition   = $OurStockRow.Condition
           Quantity    = $OurStockRow.Qty
