@@ -65,7 +65,6 @@ function New-DiscordOrder {
 
     } # End block:foreach File TCG Player Inventory Export & Discord Order List
 
-
     $CustomTcgpHeader = @(
       "TCG_Id",
       "ProductLine",
@@ -209,7 +208,7 @@ function New-DiscordOrder {
       "DISCORD ORDER CHECK REPORT"
     )
 
-    $WeHaveArray | Select-Object -Property Name, Condition, Quantity, Set
+    $WeHaveArray | Select-Object -Property Name, SetNumber, Condition, Quantity, Set | Format-Table
 
     <#
     Enhancement Idea
