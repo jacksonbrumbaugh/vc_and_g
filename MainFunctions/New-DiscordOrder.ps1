@@ -1,5 +1,5 @@
 <# RULER ----15--------25-----------------------50----------------------------80                 100                 120
-Modified: 2024-03-04
+Modified: 2024-03-05
 By: Jackson B
 #>
 function New-DiscordOrder {
@@ -32,10 +32,11 @@ function New-DiscordOrder {
       ""
     )
 
+    $PauseInSeconds = 0.5
     foreach ( $ThisLine in $ProcessMsgArray ) {
       Write-Host $ThisLine -ForegroundColor Green
 
-      Start-Sleep 1
+      Start-Sleep -Milliseconds (1000 * $PauseInSeconds)
 
     } # End block:foreach Line detailing the process about to happen
 
@@ -104,8 +105,11 @@ function New-DiscordOrder {
       ("Unique Inventory Count: {0:N0}" -f ($InventoryArray.Count - 1))
     )
 
+    $useSimpleCrossRefMode = $true
     $WantCardArray = foreach ( $ThisWantRow in $WantListContent ) {
       $CardName, $SetNumber = if ( $ThisWantRow -match "\(" ) {
+        $useSimpleCrossRefMode = $false
+
         $Name = $ThisWantRow -replace "^\d{1,3} (.*) \(.*",'$1'
         $SetNum = $ThisWantRow -replace ".*\) (.*)",'$1'
 
@@ -132,31 +136,48 @@ function New-DiscordOrder {
 
     } # End block:foreach This Want Row
 
+    $CrossRefMsg = "Cross referencing b/t order want list & our inventory"
+
+    if ( -not $useSimpleCrossRefMode ) {
+      $CrossRefMsg += " using Set Number and a focus on Foil"
+    }
+
     Write-Step @(
-      "Cross referencing b/t order want list & our inventory"
+      $CrossRefMsg
     )
 
     $WeHaveArray = @()
     foreach ( $ThisWantCard in $WantCardArray ) {
       $NameMatchArray = $InventoryArray.where{ $_.Name -match $ThisWantCard.Name }
-      $OurStock = $NameMatchArray.where{ $_.Number -eq $ThisWantCard.Number }
+
+      $OurStock = if ( $useSimpleCrossRefMode ) {
+        $NameMatchArray
+      } else {
+        $NameMatchArray.where{ $_.Number -eq $ThisWantCard.Number }
+      }
 
       foreach ( $OurStockRow in $OurStock ) {
         if ( $OurStockRow.Qty -eq 0 ) {
           continue
         }
 
-        <#
-        John has noticed that buyers on this Discord server get super picky
-        about specific set & printing (like foil vs non-foil)
-        #>
-        if ( ($ThisWantCard.Raw -match "\*F\*") -and ($OurStockRow.Condition -notmatch "Foil") ) {
-          continue
-        }
+        if ( -not $useSimpleCrossRefMode ) {
+          <#
+          John has noticed that buyers on this Discord server get super picky
+          about specific set & printing (like foil vs non-foil)
+          #>
+          $WantFoil = $ThisWantCard.Raw -match "\*F\*"
+          $isOurStockFoil = $OurStockRow.Condition -match "Foil"
 
-        if ( ($ThisWantCard.Raw -notmatch "\*F\*") -and ($OurStockRow.Condition -match "Foil") ) {
-          continue
-        }
+          if ( $WantFoil -and (-not $isOurStockFoil) ) {
+            continue
+          }
+
+          if ( (-not $WantFoil) -and $isOurStockFoil ) {
+            continue
+          }
+
+        } # End block:if caring about Foil printing
 
         $WeHaveArray += [PSCustomObject]@{
           Name        = $ThisWantCard.Name
@@ -175,10 +196,14 @@ function New-DiscordOrder {
 
     $DownloadsFolder = Join-Path $env:HOMEDRIVE (Join-Path $env:HOMEPATH "Downloads")
 
-    $DateTImeStamp = (Get-Date).ToString( "DyyyyMMdd-THHmmss" )
+    $DateTimeStamp = (Get-Date).ToString( "DyyyyMMdd-THHmmss" )
     $FullDiscordCheckReport = Join-Path $DownloadsFolder ("DiscordOrderCheck-$($DateTImeStamp).csv")
 
-    $WeHaveArray | Export-CSV -NTI -Path $FullDiscordCheckReport
+    if ( $WeHaveArray.Count -eq 0 ) {
+      New-Item -ItemType File -Path $FullDiscordCheckReport | Out-Null
+    } else {
+      $WeHaveArray | Export-CSV -NTI -Path $FullDiscordCheckReport
+    }
 
     Write-Step @(
       "DISCORD ORDER PULL SHEET"
