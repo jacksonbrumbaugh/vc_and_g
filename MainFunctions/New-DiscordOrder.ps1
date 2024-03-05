@@ -206,7 +206,7 @@ function New-DiscordOrder {
     }
 
     Write-Step @(
-      "DISCORD ORDER PULL SHEET"
+      "DISCORD ORDER CHECK REPORT"
     )
 
     $WeHaveArray | Select-Object -Property Name, Condition, Quantity, Set
