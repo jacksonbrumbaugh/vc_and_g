@@ -7,6 +7,17 @@ function New-DiscordOrder {
 
   param () # End block:param
 
+  begin {
+    function Write-Step ( [string[]]$Message ) {
+      foreach ( $ThisStep in $Message ) {
+        Write-Host $ThisStep
+      }
+
+      Write-Host ""
+    } # End function:Write-Step
+
+  } # End block:begin
+
   process {
     $ParamHash_Error = @{
       Message     = $null
@@ -14,7 +25,7 @@ function New-DiscordOrder {
     }
 
     $ProcessMsgArray = @(
-      "Soon Windows file explorers will open",
+      "Soon Windows file explorer will open",
       "1st: please select the TCG Player inventory export *.csv file",
       "2nd: please select the file containing the list of card(s) desired for the Discord order",
       "3rd: wait for the process to finish",
@@ -75,23 +86,23 @@ function New-DiscordOrder {
 
     $InventoryArray = Import-CSV $File.TCGP.FullName -Header $CustomTcgpHeader
 
-    $InProgressMsgArray = @(
-      ("Exported Inventory File: {0}" -f $File.TCGP.Name),
-      ("Unique Inventory Count: {0:N0}" -f ($InventoryArray.Count - 1)),
+    $WantListContent = Get-Content $File.DiscordOrder.FullName
+
+    Write-Step @(
+      ("Discord Order Want List File: {0}" -f $File.DiscordOrder.Name),
       "",
-      ("Discord Order File: {0}" -f $File.DiscordOrder.Name)
+      "Top several lines from the want list file"
     )
 
-    foreach ( $ThisLine in $InProgressMsgArray ) {
+    foreach ( $ThisLine in $WantListContent[0 .. 5] ) {
       Write-Host $ThisLine
     }
 
-    $WantListContent = Get-Content $File.DiscordOrder.FullName
-    foreach ( $ThisLine in $WantListContent ) {
-      Write-Host $ThisLine
-    }
-
-    for ( $n = 0; $n -lt 2; $n++ ) { Write-Host "" }
+    Write-Step @(
+      "",
+      ("Exported Inventory File: {0}" -f $File.TCGP.Name),
+      ("Unique Inventory Count: {0:N0}" -f ($InventoryArray.Count - 1))
+    )
 
     $WantCardArray = foreach ( $ThisWantRow in $WantListContent ) {
       $CardName, $SetNumber = if ( $ThisWantRow -match "\(" ) {
@@ -99,7 +110,7 @@ function New-DiscordOrder {
         $SetNum = $ThisWantRow -replace ".*\) (.*)",'$1'
 
         <#
-        Special printers (e.g. Foil, Extended Art)
+        Special printings (e.g. Foil, Extended Art)
         are marked from Moxfield with *F*, *E* (possibly other codes)
         #>
         if ( $SetNum -match "\*" ) {
@@ -121,6 +132,10 @@ function New-DiscordOrder {
 
     } # End block:foreach This Want Row
 
+    Write-Step @(
+      "Cross referencing b/t order want list & our inventory"
+    )
+
     $WeHaveArray = @()
     foreach ( $ThisWantCard in $WantCardArray ) {
       $NameMatchArray = $InventoryArray.where{ $_.Name -match $ThisWantCard.Name }
@@ -131,8 +146,15 @@ function New-DiscordOrder {
           continue
         }
 
-        Write-Verbose "Our condition: $($OurStockRow.Condition)"
+        <#
+        John has noticed that buyers on this Discord server get super picky
+        about specific set & printing (like foil vs non-foil)
+        #>
         if ( ($ThisWantCard.Raw -match "\*F\*") -and ($OurStockRow.Condition -notmatch "Foil") ) {
+          continue
+        }
+
+        if ( ($ThisWantCard.Raw -notmatch "\*F\*") -and ($OurStockRow.Condition -match "Foil") ) {
           continue
         }
 
@@ -158,7 +180,11 @@ function New-DiscordOrder {
 
     $WeHaveArray | Export-CSV -NTI -Path $FullDiscordCheckReport
 
-    $WeHaveArray | Select-Object -Property Name, Set, Condition, Quantity
+    Write-Step @(
+      "DISCORD ORDER PULL SHEET"
+    )
+
+    $WeHaveArray | Select-Object -Property Name, Condition, Quantity, Set
 
     <#
     Enhancement Idea
