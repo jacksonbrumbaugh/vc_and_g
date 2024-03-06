@@ -8,13 +8,24 @@ function New-DiscordOrder {
   param () # End block:param
 
   begin {
-    function Write-Step ( [string[]]$Message ) {
-      foreach ( $ThisStep in $Message ) {
-        Write-Host $ThisStep
-      }
-
-      Write-Host ""
-    } # End function:Write-Step
+    $CustomTcgpHeader = @(
+      "TCG_Id",
+      "ProductLine",
+      "Set",
+      "Name",
+      "Title",
+      "Number",
+      "Rarity",
+      "Condition",
+      "Market",
+      "DirectLow",
+      "LowPlusShipping",
+      "Low",
+      "Qty",
+      "AddToQty",
+      "OurPrice",
+      "Photo URL"
+    )
 
   } # End block:begin
 
@@ -24,21 +35,26 @@ function New-DiscordOrder {
       ErrorAction = "Stop"
     }
 
+    $StartTime = Get-Date
+
+    <#
+    did this totally unnecessary clunky replace to show that we made the small pivot of E -> D
+    #>
+    $VcgTcgOrderStartingCode = "F137405E".replace( "E", "D")
+
+    $OrderNumberGUID = $VcgTcgOrderStartingCode + "-"
+    $OrderNumberGUID += ((New-GUID) -split "-")[0 .. 1].ToUpper() -join "-"
+
     $ProcessMsgArray = @(
       "Soon Windows file explorer will open",
       "1st: please select the TCG Player inventory export *.csv file",
       "2nd: please select the file containing the list of card(s) desired for the Discord order",
       "3rd: wait for the process to finish",
-      ""
+      "",
+      "Order Invoice Number: $($OrderNumberGUID)"
     )
 
-    $PauseInSeconds = 0.5
-    foreach ( $ThisLine in $ProcessMsgArray ) {
-      Write-Host $ThisLine -ForegroundColor Green
-
-      Start-Sleep -Milliseconds (1000 * $PauseInSeconds)
-
-    } # End block:foreach Line detailing the process about to happen
+    Write-Display -Message $ProcessMsgArray -ForegroundColor "Green" -Pulse
 
     $TcgpInventoryFullName = Select-TcgExportFile
     $DiscordOrderFullName = Select-DiscordOrderListFile
@@ -65,30 +81,11 @@ function New-DiscordOrder {
 
     } # End block:foreach File TCG Player Inventory Export & Discord Order List
 
-    $CustomTcgpHeader = @(
-      "TCG_Id",
-      "ProductLine",
-      "Set",
-      "Name",
-      "Title",
-      "Number",
-      "Rarity",
-      "Condition",
-      "Market",
-      "DirectLow",
-      "LowPlusShipping",
-      "Low",
-      "Qty",
-      "AddToQty",
-      "OurPrice",
-      "Photo URL"
-    )
-
     $InventoryArray = Import-CSV $File.TCGP.FullName -Header $CustomTcgpHeader
 
     $WantListContent = Get-Content $File.DiscordOrder.FullName
 
-    Write-Step @(
+    Write-Display @(
       ("Discord Order Want List File: {0}" -f $File.DiscordOrder.Name),
       "",
       "Top several lines from the want list file"
@@ -98,10 +95,10 @@ function New-DiscordOrder {
       Write-Host $ThisLine
     }
 
-    Write-Step @(
+    Write-Display @(
       "",
       ("Exported Inventory File: {0}" -f $File.TCGP.Name),
-      ("Unique Inventory Count: {0:N0}" -f ($InventoryArray.Count - 1))
+      ("Unique Card Inventory Count: {0:N0}" -f ($InventoryArray.Count - 1))
     )
 
     $useSimpleCrossRefMode = $true
@@ -141,7 +138,7 @@ function New-DiscordOrder {
       $CrossRefMsg += " using Set Number and a focus on Foil"
     }
 
-    Write-Step @(
+    Write-Display @(
       $CrossRefMsg
     )
 
@@ -194,8 +191,8 @@ function New-DiscordOrder {
 
     $DownloadsFolder = Join-Path $env:HOMEDRIVE (Join-Path $env:HOMEPATH "Downloads")
 
-    $DateTimeStamp = (Get-Date).ToString( "DyyyyMMdd-THHmmss" )
-    $FullDiscordCheckReport = Join-Path $DownloadsFolder ("DiscordOrderCheck-$($DateTImeStamp).csv")
+    $InventoryCheckReportName = "InventoryCheck-$($OrderNumberGUID).csv"
+    $FullDiscordCheckReport = Join-Path $DownloadsFolder $InventoryCheckReportName
 
     if ( $WeHaveArray.Count -eq 0 ) {
       New-Item -ItemType File -Path $FullDiscordCheckReport | Out-Null
@@ -203,8 +200,15 @@ function New-DiscordOrder {
       $WeHaveArray | Export-CSV -NTI -Path $FullDiscordCheckReport
     }
 
-    Write-Step @(
-      "DISCORD ORDER CHECK REPORT"
+    $ReportHeader = "INVENTORY CHECK REPORT"
+    Write-Display @(
+      $ReportHeader,
+      ( "-" * $ReportHeader.length )
+      "",
+      "Date: $($StartTime.ToString( 'ddd yyyy-MM-dd' ))",
+      "Time: $($StartTime.ToString( 'HH:mm' ))",
+      "",
+      "Order Number: $($OrderNumberGUID)"
     )
 
     $WeHaveArray | Select-Object -Property Name, SetNumber, Condition, Quantity, Set | Format-Table
