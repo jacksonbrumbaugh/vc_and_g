@@ -1,5 +1,5 @@
 <# RULER ----15--------25-----------------------50----------------------------80                 100                 120
-Modified: 2024-03-05
+Modified: 2024-03-09
 By: Jackson B
 #>
 function New-DiscordOrder {
@@ -144,7 +144,7 @@ function New-DiscordOrder {
 
     $WeHaveArray = @()
     foreach ( $ThisWantCard in $WantCardArray ) {
-      $NameMatchArray = $InventoryArray.where{ $_.Name -match $ThisWantCard.Name }
+      $NameMatchArray = $InventoryArray.where{ $_.Name -eq $ThisWantCard.Name }
 
       $OurStock = if ( $useSimpleCrossRefMode ) {
         $NameMatchArray
