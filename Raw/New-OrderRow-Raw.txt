@@ -1,0 +1,84 @@
+to VC*
+dir
+to Test*
+dir
+to *Order*
+to *Row*
+dir
+$OrderSlip = Get-Content *3rows*
+$OrderSlip
+$OrderSlip -match "Product TCGplayer"
+$OrderSlip -match "Product\tTCGplayer"
+$OrderSlip -match "Product`tTCGplayer"
+$isCardTableFound = $false; $CardTable = foreach ( $ThisLine in $OrderSlip ) {
+if ( $ThisLine -match "TCGplayer, Inc." ) { $isCardTableFound = $false }
+
+if ( $isCardTableFound ) { $ThisLine }
+
+if ( $ThisLine -match "Product\tTCGplayer" ) { $isCardTableFound = $true }
+
+}
+$CardTable.Count
+$CardTable
+$SoldArray = for ( $n = 0; $n -lt ($CardTable / 4); $n++ ) {
+$TableRowStart = 4 * $n
+$TableRowArray = $CardTable[ $TableRowStart .. (3 + $TableRowStart) ]
+
+[PSCustomObject]@{
+FullName = $TableRowArray[0]
+Price = $TableRowArray[1]
+Qty = $TableRowArray[2]
+Total = $TableRowArray[3]
+}
+}
+$SoldArray = for ( $n = 0; $n -lt ($CardTable.Count / 4); $n++ ) {
+$TableRowStart = 4 * $n
+$TableRowArray = $CardTable[ $TableRowStart .. (3 + $TableRowStart) ]
+
+[PSCustomObject]@{
+FullName = $TableRowArray[0]
+Price = $TableRowArray[1]
+Qty = $TableRowArray[2]
+Total = $TableRowArray[3]
+}
+}
+$SOldArray
+$SoldArray = for ( $n = 0; $n -lt ($CardTable.Count / 4); $n++ ) {
+$TableRowStart = 4 * $n
+$TableRowArray = $CardTable[ $TableRowStart .. (3 + $TableRowStart) ]
+
+[PSCustomObject]@{
+FullName = $TableRowArray[0]
+Price = $TableRowArray[1]
+Qty = $TableRowArray[2]
+Total = $TableRowArray[3]
+}
+}
+$SoldArray = for ( $n = 0; $n -lt ($CardTable.Count / 4); $n++ ) {
+$TableRowStart = 4 * $n
+$TableRowArray = $CardTable[ $TableRowStart .. (3 + $TableRowStart) ]
+
+[PSCustomObject]@{
+FullName = $TableRowArray[0].trim()
+Price = $TableRowArray[1].trim()
+Qty = $TableRowArray[2].trim()
+Total = $TableRowArray[3].trim()
+}
+}
+$SOldArray
+$SoldArray = for ( $n = 0; $n -lt ($CardTable.Count / 4); $n++ ) {
+$TableRowStart = 4 * $n
+$TableRowArray = $CardTable[ $TableRowStart .. (3 + $TableRowStart) ]
+
+[PSCustomObject]@{
+FullName = $TableRowArray[0].trim()
+Raw_Price = $TableRowArray[1].trim()
+Qty = $TableRowArray[2].trim() -as [int]
+Raw_Total = $TableRowArray[3].trim()
+}
+}
+$SOldArray
+$OrderSlip
+$OrderSlip -match "Order Date"
+$OrderSlip -match "Order Date" -replace "Order Date:\s*(.*)","`$1"
+$OrderSlip -match "Order Number" -replace "Order Number:\s*(.*)","`$1"
