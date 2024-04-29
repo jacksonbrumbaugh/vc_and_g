@@ -1,9 +1,15 @@
 <# RULER ----15--------25-----------------------50----------------------------80                 100                 120
-Modified: 2024-03-03
+Modified: 2024-04-29
 By: Jackson B
 #>
 $ModuleRootDir = $PSScriptRoot
 $ModuleName = Split-Path $ModuleRootDir -Leaf
+
+enum OrderSource {
+  TCGPlayer
+  Discord
+  Facebook
+}
 
 $ChildFolderArray = Get-ChildItem $ModuleRootDir -Directory
 
