@@ -1,5 +1,5 @@
 <# RULER ----15--------25-----------------------50----------------------------80                 100                 120
-Modified: 2024-03-03
+Modified: 2024-04-29
 By: Jackson B
 #>
 function Select-File {
@@ -10,7 +10,10 @@ function Select-File {
     $Title = "Select a file",
 
     [string]
-    $InitialDirectory
+    $InitialDirectory,
+
+    [switch]
+    $Multi
   ) # End block:param
 
   begin {
@@ -72,9 +75,14 @@ function Select-File {
 
     $OpenFileDialog.Filter = "All files (*.*)| *.*"
 
+    if ( $Multi ) {
+      $OpenFileDialog.Multiselect = $true
+
+    } # End block:if allow for Multiple selections
+
     $OpenFileDialog.ShowDialog() | Out-Null
 
-    $SelectedFileName = $OpenFileDialog.Filename
+    $SelectedFileName = $OpenFileDialog.Filenames
 
     Write-Output $SelectedFileName
 
